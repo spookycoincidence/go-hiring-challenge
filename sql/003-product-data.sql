@@ -1,13 +1,14 @@
--- Insert 8 products
-INSERT INTO products (code, price) VALUES
-('PROD001', 10.99),
-('PROD002', 12.49),
-('PROD003', 8.75),
-('PROD004', 15.00),
-('PROD005', 22.99),
-('PROD006', 5.50),
-('PROD007', 18.20),
-('PROD008', 9.99);
+-- Insert 8 products with names
+INSERT INTO products (code, name, price) VALUES
+('PROD001', 'Classic Cotton T-Shirt', 10.99),
+('PROD002', 'Running Sneakers', 12.49),
+('PROD003', 'Leather Crossbody Bag', 8.75),
+('PROD004', 'Denim Jeans', 15.00),
+('PROD005', 'Summer Dress', 22.99),
+('PROD006', 'Winter Boots', 5.50),
+('PROD007', 'Wool Sweater', 18.20),
+('PROD008', 'Baseball Cap', 9.99);
+
 
 -- Insert variants for each product using product code to look up product_id
 
