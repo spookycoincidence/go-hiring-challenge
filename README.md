@@ -152,7 +152,9 @@ Oportunidades de mejoras posibles:
 
 
 Proyecto desarrollado con fines de evaluación técnica.
-Autor: Huilen Vilches, fullstack developer (portfolio: huilen.dev)
+
+## Autor: Huilen Vilches, fullstack developer 
+## Portfolio: https://www.huilen.dev/
 
 Version en ingles:
 
@@ -303,4 +305,6 @@ Potential Improvements:
 - Product Reviews or Stock Management System
 
 Project developed for technical evaluation purposes.
-Author: Huilen Vilches, fullstack developer (portfolio: huilen.dev)
+
+## Author: Huilen Vilches, fullstack developer 
+## Portfolio: https://www.huilen.dev/
