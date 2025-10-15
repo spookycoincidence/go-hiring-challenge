@@ -1,19 +1,36 @@
 package catalog
 
 import (
-	"encoding/json"
 	"net/http"
+	"strconv"
 
+	"github.com/mytheresa/go-hiring-challenge/app/api"
 	"github.com/mytheresa/go-hiring-challenge/models"
+	"github.com/shopspring/decimal"
 )
 
-type Response struct {
-	Products []Product `json:"products"`
+type ProductResponse struct {
+	Code     string                   `json:"code"`
+	Name     string                   `json:"name"`
+	Price    float64                  `json:"price"`
+	Category *CategoryResponse        `json:"category,omitempty"`
+	Variants []ProductVariantResponse `json:"variants,omitempty"`
 }
 
-type Product struct {
-	Code  string  `json:"code"`
+type CategoryResponse struct {
+	Code string `json:"code"`
+	Name string `json:"name"`
+}
+
+type ProductVariantResponse struct {
+	Name  string  `json:"name"`
+	SKU   string  `json:"sku"`
 	Price float64 `json:"price"`
+}
+
+type CatalogResponse struct {
+	Products []ProductResponse `json:"products"`
+	Total    int64             `json:"total"`
 }
 
 type CatalogHandler struct {
@@ -27,30 +44,101 @@ func NewCatalogHandler(r *models.ProductsRepository) *CatalogHandler {
 }
 
 func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
-	res, err := h.repo.GetAllProducts()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Map response
-	products := make([]Product, len(res))
-	for i, p := range res {
-		products[i] = Product{
-			Code:  p.Code,
-			Price: p.Price.InexactFloat64(),
+	offset := 0
+	if offsetStr := r.URL.Query().Get("offset"); offsetStr != "" {
+		if val, err := strconv.Atoi(offsetStr); err == nil {
+			offset = val
 		}
 	}
 
-	// Return the products as a JSON response
-	w.Header().Set("Content-Type", "application/json")
-
-	response := Response{
-		Products: products,
+	limit := 10
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if val, err := strconv.Atoi(limitStr); err == nil {
+			limit = val
+		}
 	}
 
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	var categoryCode *string
+	if cat := r.URL.Query().Get("category"); cat != "" {
+		categoryCode = &cat
+	}
+
+	var maxPrice *decimal.Decimal
+	if priceStr := r.URL.Query().Get("maxPrice"); priceStr != "" {
+		if price, err := decimal.NewFromString(priceStr); err == nil {
+			maxPrice = &price
+		}
+	}
+
+	params := models.GetAllProductsParams{
+		Pagination: models.PaginationParams{
+			Offset: offset,
+			Limit:  limit,
+		},
+		CategoryCode: categoryCode,
+		MaxPrice:     maxPrice,
+	}
+
+	result, err := h.repo.GetAllProducts(params)
+	if err != nil {
+		api.ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	products := make([]ProductResponse, len(result.Products))
+	for i, p := range result.Products {
+		products[i] = mapProductToResponse(p)
+	}
+
+	response := CatalogResponse{
+		Products: products,
+		Total:    result.Total,
+	}
+
+	api.OKResponse(w, response)
+}
+
+func (h *CatalogHandler) HandleGetByCode(w http.ResponseWriter, r *http.Request) {
+	code := r.PathValue("code")
+
+	product, err := h.repo.GetProductByCode(code)
+	if err != nil {
+		api.ErrorResponse(w, http.StatusNotFound, "Product not found")
+		return
+	}
+
+	response := mapProductToResponse(*product)
+	api.OKResponse(w, response)
+}
+
+func mapProductToResponse(p models.Product) ProductResponse {
+	resp := ProductResponse{
+		Code:  p.Code,
+		Name:  p.Name,
+		Price: p.Price.InexactFloat64(),
+	}
+
+	if p.Category != nil {
+		resp.Category = &CategoryResponse{
+			Code: p.Category.Code,
+			Name: p.Category.Name,
+		}
+	}
+
+	variants := make([]ProductVariantResponse, len(p.Variants))
+	for i, v := range p.Variants {
+		price := v.Price
+		if price.IsZero() {
+			price = p.Price
+		}
+
+		variants[i] = ProductVariantResponse{
+			Name:  v.Name,
+			SKU:   v.SKU,
+			Price: price.InexactFloat64(),
+		}
+	}
+	resp.Variants = variants
+
+	return resp
 }
